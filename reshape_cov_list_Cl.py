@@ -58,7 +58,7 @@ def objective_function(ell_max):
     return ssd
 
 
-cov_folder = '/home/cosmo/davide.sciotti/data/OneCovariance/output_SPV3_v3_dense_LiFECls'
+cov_folder = '/home/cosmo/davide.sciotti/data/OneCovariance/output_ISTF_v3_nobinning'
 chunk_size = 5000000
 load_mat_files = False
 
@@ -174,8 +174,7 @@ if 'SPV3' in cov_folder:
 else:
     ells_sb, _ = ell_utils.compute_ells(nbl=cov_nbl, ell_min=ellmin, ell_max=ellmax,
                                         recipe='ISTF', output_ell_bin_edges=False)
-    ellmax_save_filename = ellmax
-    # TODO test this with ISTF 
+    ellmax_save_filename = int(ellmax)
 
 
 # # Perform the minimization
@@ -363,12 +362,12 @@ n_elem_cross = cov_nbl * zpairs_cross
 if load_mat_files:
     cov_mat_fmt_2dcloe_llll = cov_mat_fmt[-n_elem_auto:, -n_elem_auto:]
     cov_mat_fmt_2dcloe_glgl = cov_mat_fmt[n_elem_auto:n_elem_auto +
-                                        n_elem_cross, n_elem_auto:n_elem_auto + n_elem_cross]
+                                          n_elem_cross, n_elem_auto:n_elem_auto + n_elem_cross]
     cov_mat_fmt_2dcloe_gggg = cov_mat_fmt[:n_elem_auto, :n_elem_auto]
 
     cov_tot_3x2pt_2dcloe_llll = cov_tot_3x2pt_2dcloe[:n_elem_auto, :n_elem_auto]
     cov_tot_3x2pt_2dcloe_glgl = cov_tot_3x2pt_2dcloe[n_elem_auto:n_elem_auto +
-                                                    n_elem_cross, n_elem_auto:n_elem_auto + n_elem_cross]
+                                                     n_elem_cross, n_elem_auto:n_elem_auto + n_elem_cross]
     cov_tot_3x2pt_2dcloe_gggg = cov_tot_3x2pt_2dcloe[-n_elem_auto:, -n_elem_auto:]
 
     for cov_mat_fmt_block, cov_dat_fmt_block, block_name in zip((cov_mat_fmt_2dcloe_llll, cov_mat_fmt_2dcloe_glgl, cov_mat_fmt_2dcloe_gggg),
@@ -376,7 +375,7 @@ if load_mat_files:
                                                                 cov_tot_3x2pt_2dcloe_gggg),
                                                                 ('llll', 'glgl', 'gggg')):
         mm.compare_arrays(cov_mat_fmt_block, cov_dat_fmt_block,
-                        f'cov_mat_fmt_{block_name}', f'cov_dat_fmt_{block_name}', log_array=True)
+                          f'cov_mat_fmt_{block_name}', f'cov_dat_fmt_{block_name}', log_array=True)
 
 
 # ! plot Cl and errors
@@ -395,7 +394,7 @@ for probe_idx, probe in zip((range(cols)), (cl_oc_out_ll_3d, cl_oc_out_gl_3d, cl
         probe_idx_list = (1, 1, 1, 1)
 
     for zi in range(zbins):
-    # for zi in (5, ):
+        # for zi in (5, ):
 
         cov_g_vs_ell = np.sqrt([cov_g_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
                                           ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
@@ -406,9 +405,9 @@ for probe_idx, probe in zip((range(cols)), (cl_oc_out_ll_3d, cl_oc_out_gl_3d, cl
         cov_sn_vs_ell = np.sqrt([cov_sn_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
                                             ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
         cov_ssc_vs_ell = np.sqrt([cov_ssc_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-                                            ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
+                                              ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
         cov_cng_vs_ell = np.sqrt([cov_cng_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-                                            ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
+                                              ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
 
         # errorbars
         # ax[col].errorbar(theta_arcmin, xi_pp_3D[:, zi, zi], yerr=cov_vs_ell, label=f'z{zi}', c=colors[zi], alpha=0.5)
@@ -421,7 +420,6 @@ for probe_idx, probe in zip((range(cols)), (cl_oc_out_ll_3d, cl_oc_out_gl_3d, cl
         # ax[probe_idx].plot(ells_oc_load, cov_sn_vs_ell, label=f'z{zi}, SN', c='tab:purple', ls=':', marker='.')
         # ax[probe_idx].plot(ells_oc_load, cov_ssc_vs_ell, label=f'z{zi}, SSC', c='tab:red', ls='-', marker='.')
         # ax[probe_idx].plot(ells_oc_load, cov_cng_vs_ell, label=f'z{zi}, cNG', c='tab:blue', ls='-', marker='.')
-        
 
     ax[probe_idx].set_title(probe_names[probe_idx])
     ax[probe_idx].set_xlabel('$\ell$')
