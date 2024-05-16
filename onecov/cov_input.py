@@ -2544,6 +2544,8 @@ class Input:
             exception texts.
 
         """
+        
+        self.which_cov_binning = config['survey specs']['which_cov_binning']
 
         if 'survey specs' in config:
             if 'mask_directory' in config['survey specs']:
@@ -3861,7 +3863,7 @@ class Input:
                 'read_mask_clust_lens', 'read_alm_clust_lens',
                 'alm_file_clust_ggl', 'read_mask_clust_ggl',
                 'read_alm_clust_ggl', 'alm_file_lens_ggl',
-                'read_mask_lens_ggl', 'read_alm_lens_ggl', 'save_alms', 'use_tex']
+                'read_mask_lens_ggl', 'read_alm_lens_ggl', 'save_alms', 'use_tex', 'which_cov_binning']
         if self.mask_file_clust is not None:
             self.mask_file_clust = [path.join(self.mask_dir, mfile)
                                     for mfile in self.mask_file_clust]
@@ -3904,7 +3906,7 @@ class Input:
                   self.alm_file_clust_ggl, self.read_mask_clust_ggl,
                   self.read_alm_clust_ggl, self.alm_file_lens_ggl,
                   self.read_mask_lens_ggl, self.read_alm_lens_ggl,
-                  self.save_alms, self.use_tex]
+                  self.save_alms, self.use_tex, self.which_cov_binning]
         self.survey_params = dict(zip(keys, values))
 
         keys = ['M_bins', 'log10M_min', 'log10M_max', 'hmf_model',
