@@ -38,6 +38,11 @@ if not observables['arbitrary_summary']['do_arbitrary_summary']:
                     covariance_in_ell_space[0],
                     covariance_in_ell_space[1],
                     covariance_in_ell_space[2])
+        
+        import numpy as np
+        out_folder = output['Cell'].replace('./', '').replace('/Cell.ascii', '')
+        np.savetxt(f'{out_folder}/delta_ell.txt', covell.delta_ell_dav)
+
 
 
     if ((observables['observables']['est_shear'] == 'xi_pm' and observables['observables']['cosmic_shear']) or (observables['observables']['est_ggl'] == 'gamma_t' and observables['observables']['ggl']) or observables['observables']['est_clust'] == 'w' and observables['observables']['clustering']):
