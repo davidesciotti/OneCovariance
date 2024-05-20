@@ -2335,27 +2335,15 @@ class CovELLSpace(PolySpectra):
         assert np.allclose(ellrange_12_ul, ellrange_34_ul, rtol=1e-5, atol=0)
         assert np.allclose(self.ellrange_lensing_ul, ellrange_34_ul, rtol=1e-5, atol=0)
         
-        delta_ell = np.diff(ellrange_12_ul)
-        
-        
         binned_covariance = np.zeros((len(ellrange_12_ul) - 1, 
                                       len(ellrange_34_ul) - 1, 
                                       len(cov[0,0,:,0,0,0,0,0]), len(cov[0,0,0,:,0,0,0,0]), len(cov[0,0,0,0,:,0,0,0]), 
                                       len(cov[0,0,0,0,0,:,0,0]), len(cov[0,0,0,0,0,0,:,0]), len(cov[0,0,0,0,0,0,0,:])))
         
-        breakpoint()
-        print('which_cov_binning', self.which_cov_binning)
-        
-        if self.which_cov_binning == 'EC20':
-            print('Binning the ell-space covariance following EC20 recipe')
-            for ell_idx in range(len(self.ellrange_lensing)):
-                # I think this is wrong, w.g. the covariance has shape (271, 271, 1, 1, 10, 10, 10, 10) in the C01 case;
-                # I need to interpolate
-                binned_covariance[ell_idx, ell_idx, ...] = full_sky_angle / max(area_12,area_34)* \
-                    (1/(2.*self.ellrange_lensing[ell_idx] + 1))/delta_ell[ell_idx, ...]  * cov[ell_idx, ell_idx, ...]
-        
-        elif self.which_cov_binning == 'OneCovariance':
+        if self.which_cov_binning == 'OneCovariance':
             print('Binning the ell-space covariance following OneCovariance recipe')
+            # In this case, explicit summation over the covariance interpolated and evaluated at the different 
+            # multipoles is used
             
             for i_ell in range(len(ellrange_12_ul) - 1):
                 for j_ell in range(len(ellrange_34_ul) - 1):
@@ -2385,9 +2373,14 @@ class CovELLSpace(PolySpectra):
                                                     result = full_sky_angle / max(area_12,area_34)*np.sum(spline(overlapping_elements)/(2.*overlapping_elements + 1))/N_ell_12/N_ell_34
                                                     binned_covariance[i_ell, j_ell, i_sample, j_sample, i_tomo, j_tomo, k_tomo, l_tomo] = result
             
-        elif self.which_cov_binning == 'OneCovariance_delta_ell':
-            print('Binning the ell-space covariance following OneCovariance recipe, with \Delta_ell')
+        elif self.which_cov_binning == 'EC20':
+            print('Binning the ell-space covariance following EC20 recipe')
+            # In this case, we just take the covariance interpolated and evaluated at the specific ell values, then 
+            # divide by \Delta_ell
             
+            delta_ell = np.diff(ellrange_12_ul)
+            self.delta_ell_dav = delta_ell
+            print('delta_ell:', delta_ell)
 
             for i_sample in range(len(cov[0,0,:,0,0,0,0,0])):
                 for j_sample in range(len(cov[0,0,0,:,0,0,0,0])):
@@ -2404,44 +2397,17 @@ class CovELLSpace(PolySpectra):
                                     if len(np.where(np.diagonal(cov[:, :, i_sample, j_sample, i_tomo, j_tomo, k_tomo, l_tomo]))[0]):
                                         spline = UnivariateSpline(self.ellrange, np.diagonal(cov[:, :, i_sample, j_sample, i_tomo, j_tomo, k_tomo, l_tomo]), k=2, s=0, ext=1)
                                         result = full_sky_angle / max(area_12,area_34)*(1/(2.*self.ellrange_lensing + 1))/delta_ell *  spline(self.ellrange_lensing)
-                                        # un-vectorized version
+                                        
+                                        # un-vectorized version (needs an ell loop above!)
                                         # binned_covariance[ell_idx, ell_idx, i_sample, j_sample, i_tomo, j_tomo, k_tomo, l_tomo] = full_sky_angle / max(area_12,area_34)* \
                                             # (1/(2.*self.ellrange_lensing[ell_idx] + 1))/delta_ell[ell_idx]  * spline(self.ellrange_lensing[ell_idx])
 
-                                for ell_idx in range(len(self.ellrange_lensing)):
-                                    binned_covariance[ell_idx, ell_idx, i_sample, j_sample, i_tomo, j_tomo, k_tomo, l_tomo] = result[ell_idx]
-            
-                    
-            # for i_ell in range(len(ellrange_12_ul) - 1):
-            #     for j_ell in range(len(ellrange_34_ul) - 1):
-            #         integration_ell_12 = np.arange(ellrange_12_ul[i_ell], ellrange_12_ul[i_ell+1]).astype(int)
-            #         N_ell_12 = len(integration_ell_12)
-            #         integration_ell_34 = np.arange(ellrange_34_ul[j_ell], ellrange_34_ul[j_ell+1]).astype(int)
-            #         N_ell_34 = len(integration_ell_34)
-            #         overlapping_elements = np.array(list(set(integration_ell_12).intersection(set(integration_ell_34))))
+                                    for ell_idx in range(len(self.ellrange_lensing)):
+                                        binned_covariance[ell_idx, ell_idx, i_sample, j_sample, i_tomo, j_tomo, k_tomo, l_tomo] = result[ell_idx]
+                
 
-            #         if len(overlapping_elements) == 0:
-            #             continue
-            #         else:
-            #             for i_sample in range(len(cov[0,0,:,0,0,0,0,0])):
-            #                 for j_sample in range(len(cov[0,0,0,:,0,0,0,0])):
-            #                     for i_tomo in range(len(cov[0,0,0,0,:,0,0,0])):
-            #                         j_tomo_start = 0
-            #                         if unique_12:
-            #                             j_tomo_start = i_tomo
-            #                         for j_tomo in range(j_tomo_start, len(cov[0,0,0,0,0,:,0,0])):
-            #                             for k_tomo in range(len(cov[0,0,0,0,0,0,:,0])):
-            #                                 l_tomo_start = 0
-            #                                 if unique_34:
-            #                                     l_tomo_start = k_tomo
-            #                                 for l_tomo in range(l_tomo_start, len(cov[0,0,0,0,0,0,0,:])):
-            #                                     if len(np.where(np.diagonal(cov[:, :, i_sample, j_sample, i_tomo, j_tomo, k_tomo, l_tomo]))[0]):
-            #                                         spline = UnivariateSpline(self.ellrange, np.diagonal(cov[:, :, i_sample, j_sample, i_tomo, j_tomo, k_tomo, l_tomo]), k=2, s=0, ext=1)
-            #                                         result = full_sky_angle / max(area_12,area_34)*(spline(overlapping_elements)/(2.*overlapping_elements + 1))/delta_ell[overlapping_elements]
-            #                                         binned_covariance[i_ell, j_ell, i_sample, j_sample, i_tomo, j_tomo, k_tomo, l_tomo] = result
-            
-            else: 
-                raise ValueError('which_cov_binning not recognized')
+        else: 
+            raise ValueError('which_cov_binning not must be "OneCovariance" or "EC20"')
         
         return binned_covariance
 
@@ -2458,7 +2424,7 @@ class CovELLSpace(PolySpectra):
                                unique_34):
         if not isinstance(cov, np.ndarray):
             return 0
-        full_sky_angle = 1 * self.deg2torad2
+        full_sky_angle = 1 * self.deg2torad2  # I believe this is correct?
 
         binned_covariance = np.zeros((len(ellrange_12_ul) - 1, len(ellrange_34_ul) - 1, len(cov[0,0,:,0,0,0,0,0]), len(cov[0,0,0,:,0,0,0,0]), len(cov[0,0,0,0,:,0,0,0]), len(cov[0,0,0,0,0,:,0,0]), len(cov[0,0,0,0,0,0,:,0]), len(cov[0,0,0,0,0,0,0,:])))
         t0, tomos = time.time(), 0
