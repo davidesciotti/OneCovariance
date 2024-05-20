@@ -1,6 +1,7 @@
 import gc
 import re
 import time
+import warnings
 from matplotlib import cm, pyplot as plt
 import numpy as np
 import pandas as pd
@@ -33,7 +34,11 @@ def cl_oc_to_3d(probe_oc_name):
     ell_idx = df_cl['#ell'].map(cl_out_ell_indices).values
 
     # Compute z indices
-    z_indices = df_cl[['tomoi', 'tomoj']].sub(1).values
+    if np.min(df_cl[['tomoi', 'tomoj']].values) == 1:
+        z_indices = df_cl[['tomoi', 'tomoj']].sub(1).values
+    else:
+        warnings.warn('tomo indices seem to start from 0...')
+        z_indices = df_cl[['tomoi', 'tomoj']].values
 
     # Vectorized assignment to the arrays
     index_tuple = (ell_idx, z_indices[:, 0], z_indices[:, 1])
@@ -58,7 +63,7 @@ def objective_function(ell_max):
     return ssd
 
 
-cov_folder = '/home/cosmo/davide.sciotti/data/OneCovariance/output_ISTF_v3_nobinning'
+cov_folder = '/home/cosmo/davide.sciotti/data/OneCovariance/output_Cl_C01_v5_coarse'
 chunk_size = 5000000
 load_mat_files = False
 
@@ -119,16 +124,19 @@ cl_ll_out = np.genfromtxt(f'{cov_folder}/Cell_kappakappa.ascii')
 cl_gl_out = np.genfromtxt(f'{cov_folder}/Cell_gkappa.ascii')
 cl_gg_out = np.genfromtxt(f'{cov_folder}/Cell_gg.ascii')
 
-cl_in_ells = np.unique(cl_ll_in[:, 0])
-cl_out_ells = np.unique(cl_ll_out[:, 0])
+ells_cl_in = np.unique(cl_ll_in[:, 0])
+ells_cl_out = np.unique(cl_ll_out[:, 0])
 
-assert np.allclose(cl_in_ells, cl_out_ells, atol=0, rtol=1e-4), 'ell values are not the same'
+nbl_cl_in = len(ells_cl_in)
+nbl_cl_out = len(ells_cl_out)
+
+assert np.allclose(ells_cl_in, ells_cl_out, atol=0, rtol=1e-4), 'ell values are not the same'
 np.testing.assert_allclose(cl_ll_out, cl_ll_in, atol=0, rtol=1e-4)
 np.testing.assert_allclose(cl_gl_out, cl_gl_in, atol=0, rtol=1e-4)
 np.testing.assert_allclose(cl_gg_out, cl_gg_in, atol=0, rtol=1e-4)
 
-print('nbl_cl_in:', len(cl_in_ells))
-print('nbl_cl_out:', len(cl_out_ells))
+print('nbl_cl_in:', len(ells_cl_in))
+print('nbl_cl_out:', len(ells_cl_out))
 print('nbl_cl_cfg:', cl_cfg_nbl, '\n')
 
 # ! read and print the header, check that matches the one manually defined
@@ -144,6 +152,8 @@ assert column_names == header_list, 'column names from .dat file do not match wi
 ells_oc_load = pd.read_csv(f'{cov_folder}/covariance_list.dat',
                            usecols=['ell1'], delim_whitespace=True)['ell1'].unique()
 cov_ell_indices = {ell_out: idx for idx, ell_out in enumerate(ells_oc_load)}
+np.save(f'{cov_folder}/ells_oc_load.npy', ells_oc_load)
+
 
 # this is taken from OC (in cov_ell_space.py)
 ells_oc_computed = compute_ells_oc(nbl=int(cfg['covELLspace settings']['ell_bins_clustering']),
@@ -166,14 +176,14 @@ cov_nbl = len(ells_oc_load)
 
 # ell_sb can also be obtained as
 if 'SPV3' in cov_folder:
-    ells_sb, _ = ell_utils.compute_ells(nbl=32, ell_min=10, ell_max=5000,
-                                        recipe='ISTF', output_ell_bin_edges=False)
+    ells_sb, delta_ell_sb = ell_utils.compute_ells(nbl=32, ell_min=10, ell_max=5000,
+                                                   recipe='ISTF', output_ell_bin_edges=False)
     ells_sb = ells_sb[:cl_cfg_nbl]
     ellmax_save_filename = 3000
 
 else:
-    ells_sb, _ = ell_utils.compute_ells(nbl=cov_nbl, ell_min=ellmin, ell_max=ellmax,
-                                        recipe='ISTF', output_ell_bin_edges=False)
+    ells_sb, delta_ell_sb = ell_utils.compute_ells(nbl=cov_nbl, ell_min=ellmin, ell_max=ellmax,
+                                                   recipe='ISTF', output_ell_bin_edges=False)
     ellmax_save_filename = int(ellmax)
 
 
@@ -263,7 +273,11 @@ for df_chunk in pd.read_csv(f'{cov_folder}/covariance_list.dat', delim_whitespac
     ell2_idx = df_chunk['ell2'].map(cov_ell_indices).values
 
     # Compute z indices
-    z_indices = df_chunk[['tomoi', 'tomoj', 'tomok', 'tomol']].sub(1).values
+    if np.min(df_chunk[['tomoi', 'tomoj', 'tomok', 'tomol']].values) == 1:
+        z_indices = df_chunk[['tomoi', 'tomoj', 'tomok', 'tomol']].sub(1).values
+    else:
+        warnings.warn('tomo indices seem to start from 0...')
+        z_indices = df_chunk[['tomoi', 'tomoj', 'tomok', 'tomol']].values
 
     # Vectorized assignment to the arrays
     index_tuple = (probe_idx_a, probe_idx_b, probe_idx_c, probe_idx_d, ell1_idx, ell2_idx,
@@ -284,16 +298,94 @@ cl_oc_out_ll_3d = cl_oc_to_3d('Cell_kappakappa')
 cl_oc_out_gl_3d = cl_oc_to_3d('Cell_gkappa')
 cl_oc_out_gg_3d = cl_oc_to_3d('Cell_gg')
 
+# ! compute Gaussian covariance with Spaceborne
+delta_ell_cl_out = np.genfromtxt(f'{cov_folder}/delta_ell.txt')
 
-cov_10d_dict = {
-    'SVA': cov_sva_10d,
-    'MIX': cov_mix_10d,
-    'SN': cov_sn_10d,
-    'G': cov_g_10d,
-    'SSC': cov_ssc_10d,
-    'cNG': cov_cng_10d,
-    'tot': cov_tot_10d,
-}
+survey_area_deg2 = float(cfg['survey specs']['survey_area_lensing_in_deg2'])
+deg2_in_sphere = 41_252.96125
+fsky = survey_area_deg2 / deg2_in_sphere
+
+sigma_eps_i = float(cfg['survey specs']['ellipticity_dispersion'].split(',')[0])
+# [assert sigma_eps_i == float(cfg['survey specs']['ellipticity_dispersion'].split(',')[zi]) for zi in range(1, zbins)]
+
+string_from_ini = cfg['survey specs']['n_eff_lensing']
+string_elements = string_from_ini.split(',')
+ngal_lensing = np.array([float(element.strip()) for element in string_elements])
+
+string_from_ini = cfg['survey specs']['n_eff_clust']
+string_elements = string_from_ini.split(',')
+ngal_clustering = np.array([float(element.strip()) for element in string_elements])
+
+assert np.allclose(ngal_lensing, ngal_clustering, atol=0, rtol=1e-5), 'ngal_lensing and ngal_clustering do not match'
+
+n_probes = 2
+sigma_eps2 = (sigma_eps_i * np.sqrt(2)) ** 2,
+
+# build noise vector
+noise_3x2pt_4D = mm.build_noise(zbins, n_probes, sigma_eps2=sigma_eps2, ng=ngal_lensing,
+                                EP_or_ED='EP', which_shape_noise='correct')
+
+# create dummy ell axis, the array is just repeated along it
+noise_5D = np.zeros((n_probes, n_probes, nbl_cl_out, zbins, zbins))
+cl_3x2pt_5D = np.zeros((n_probes, n_probes, nbl_cl_out, zbins, zbins))
+for probe_A in (0, 1):
+    for probe_B in (0, 1):
+        for ell_idx in range(nbl_cl_out):
+            noise_5D[probe_A, probe_B, ell_idx, :, :] = noise_3x2pt_4D[probe_A, probe_B, ...]
+
+# remember, the ell axis is a dummy one for the noise, is just needs to be of the
+# same length as the corresponding cl one
+noise_LL_5D = noise_5D[0, 0, :nbl_cl_out, :, :][np.newaxis, np.newaxis, ...]
+noise_GG_5D = noise_5D[1, 1, :nbl_cl_out, :, :][np.newaxis, np.newaxis, ...]
+noise_WA_5D = noise_5D[0, 0, :nbl_cl_out, :, :][np.newaxis, np.newaxis, ...]
+noise_3x2pt_5D = noise_5D[:, :, :nbl_cl_out, :, :]
+
+cl_LL_5D = cl_oc_out_ll_3d[np.newaxis, np.newaxis, ...]
+cl_GG_5D = cl_oc_out_gg_3d[np.newaxis, np.newaxis, ...]
+cl_3x2pt_5D[0, 0, ...] = cl_oc_out_ll_3d
+cl_3x2pt_5D[1, 1, ...] = cl_oc_out_gg_3d
+cl_3x2pt_5D[0, 1, ...] = cl_oc_out_gl_3d.transpose(0, 2, 1)
+cl_3x2pt_5D[1, 0, ...] = cl_oc_out_gl_3d
+
+# 5d versions of auto-probe spectra
+cov_WL_GO_6D_sb = mm.covariance_einsum(cl_LL_5D, noise_LL_5D, fsky, ells_cl_out, delta_ell_cl_out, True)[0, 0, 0, 0, ...]
+cov_GC_GO_6D_sb = mm.covariance_einsum(cl_GG_5D, noise_GG_5D, fsky, ells_cl_out, delta_ell_cl_out, True)[0, 0, 0, 0, ...]
+cov_3x2pt_GO_9D_sb = mm.covariance_einsum(cl_3x2pt_5D, noise_3x2pt_5D, fsky, ells_cl_out, delta_ell_cl_out, True)
+
+cov_WL_GO_6D_sb_sva, cov_WL_GO_6D_sb_sn, cov_WL_GO_6D_sb_mix = mm.covariance_einsum_split(
+    cl_LL_5D, noise_LL_5D, fsky, ells_cl_out, delta_ell_cl_out, True)
+cov_GC_GO_6D_sb_sva, cov_GC_GO_6D_sb_sn, cov_GC_GO_6D_sb_mix = mm.covariance_einsum_split(
+    cl_GG_5D, noise_GG_5D, fsky, ells_cl_out, delta_ell_cl_out, True)
+cov_3x2pt_GO_9D_sb_sva, cov_3x2pt_GO_9D_sn, cov_3x2pt_GO_9D_mix = mm.covariance_einsum_split(
+    cl_3x2pt_5D, noise_3x2pt_5D, fsky, ells_cl_out, delta_ell_cl_out, True)
+
+cov_WL_GO_6D_sb_sva = cov_WL_GO_6D_sb_sva[0, 0, 0, 0, ...]
+cov_GC_GO_6D_sb_sva = cov_GC_GO_6D_sb_sva[0, 0, 0, 0, ...]
+cov_WL_GO_6D_sb_sn = cov_WL_GO_6D_sb_sn[0, 0, 0, 0, ...]
+cov_GC_GO_6D_sb_sn = cov_GC_GO_6D_sb_sn[0, 0, 0, 0, ...]
+cov_WL_GO_6D_sb_mix = cov_WL_GO_6D_sb_mix[0, 0, 0, 0, ...]
+cov_GC_GO_6D_sb_mix = cov_GC_GO_6D_sb_mix[0, 0, 0, 0, ...]
+# ! END compute Gaussian covariance with Spaceborne
+
+# compare covariance elements for the various G terms (SVA, SN, MIX)
+cov_sva_9d = np.array([cov_sva_10d[:, :, :, :, ell_idx, ell_idx, :, :, :, :] for ell_idx in range(cov_nbl)])
+cov_sva_9d = np.array([cov_sva_10d[:, :, :, :, ell_idx, ell_idx, :, :, :, :] for ell_idx in range(cov_nbl)])
+cov_sva_9d = np.array([cov_sva_10d[:, :, :, :, ell_idx, ell_idx, :, :, :, :] for ell_idx in range(cov_nbl)])
+
+plt.figure()
+plt.plot(cov_3x2pt_GO_9D_sb_sva.flatten())
+plt.plot(cov_sva_9d.flatten())
+plt.yscale('log')
+
+
+cov_10d_dict = {'SVA': cov_sva_10d,
+                'MIX': cov_mix_10d,
+                'SN': cov_sn_10d,
+                'G': cov_g_10d,
+                'SSC': cov_ssc_10d,
+                'cNG': cov_cng_10d,
+                'tot': cov_tot_10d,
+                }
 
 for cov_term in cov_10d_dict.keys():
 
@@ -409,12 +501,20 @@ for probe_idx, probe in zip((range(cols)), (cl_oc_out_ll_3d, cl_oc_out_gl_3d, cl
         cov_cng_vs_ell = np.sqrt([cov_cng_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
                                               ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
 
+        cov_g_vs_ell_sb = np.sqrt([cov_3x2pt_GO_9D_sb[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
+                                                      ell_idx, zi, zi, zi, zi] for ell_idx in range(len(ells_sb___))])
+
         # errorbars
         # ax[col].errorbar(theta_arcmin, xi_pp_3D[:, zi, zi], yerr=cov_vs_ell, label=f'z{zi}', c=colors[zi], alpha=0.5)
 
         # plot signal and error separately
-        ax[probe_idx].plot(cl_out_ells, probe[:, zi, zi], label=f'z{zi}', c=colors[zi], marker='')
-        ax[probe_idx].plot(ells_oc_load, cov_g_vs_ell, label=f'z{zi}, G', c=colors[zi], ls='--', marker='')
+        plt_kwargs = {'c': colors[zi], 'marker': ''}
+        ax[probe_idx].plot(ells_cl_out, probe[:, zi, zi], label=f'z{zi}', **plt_kwargs,)
+        ax[probe_idx].plot(ells_oc_load, cov_g_vs_ell,
+                           label=f'z{zi}, G OC' if zi == 0 else None, **plt_kwargs, ls='--')
+        ax[probe_idx].plot(ells_sb___, cov_g_vs_ell_sb,
+                           label=f'z{zi}, G SB' if zi == 0 else None, **plt_kwargs, ls=':')
+
         # ax[probe_idx].plot(ells_oc_load, cov_sva_vs_ell, label=f'z{zi}, SVA', c='tab:green', ls=':', marker='.')
         # ax[probe_idx].plot(ells_oc_load, cov_mix_vs_ell, label=f'z{zi}, MIX', c='tab:orange', ls=':', marker='.')
         # ax[probe_idx].plot(ells_oc_load, cov_sn_vs_ell, label=f'z{zi}, SN', c='tab:purple', ls=':', marker='.')
