@@ -38,7 +38,7 @@ def extract_probes(probe_string, probe_names):
     return matched_probes
 
 
-cov_folder = '/home/cosmo/davide.sciotti/data/OneCovariance/output_2PCF_C01_cfgFix'
+cov_folder = '/home/cosmo/davide.sciotti/data/OneCovariance/output_2PCF_C01_v5_nbl30'
 cl_input_folder = '/home/cosmo/davide.sciotti/data/CLOE_validation/output/v2.0.2/C01'
 
 cfg = configparser.ConfigParser()
@@ -197,7 +197,7 @@ for probe_idx in range(4):
     cov_g_2d = mm.cov_4D_to_2D(cov_g_4d, block_index='vincenzo')
 
     # mm.matshow(cov_g_2d, log=True)
-    
+
     variance = np.diag(cov_g_2d)
     np.savetxt(cov_folder + '/variance_' + probe_names[probe_idx] + '.dat', variance)
 
@@ -238,7 +238,7 @@ for probe_idx, probe in zip((range(4)), (xi_gg_3D, xi_gl_3D, xi_pp_3D, xi_mm_3D)
     col = probe_idx % cols
 
     for zi in range(zbins):
-    # for zi in (5, ):
+        # for zi in (5, ):
 
         cov_g_vs_theta = np.sqrt([cov_g_10d[probe_idx, probe_idx, theta_idx, theta_idx, zi, zi, zi, zi]
                                   for theta_idx in range(theta_bins)])
