@@ -25,6 +25,7 @@ else:
     read_in_tables = fileinp.read_input()
 
 if not observables['arbitrary_summary']['do_arbitrary_summary']:
+    
     if ((observables['observables']['est_shear'] == 'C_ell' and observables['observables']['cosmic_shear']) or (observables['observables']['est_ggl'] == 'C_ell' and observables['observables']['ggl']) or observables['observables']['est_clust'] == 'C_ell' and observables['observables']['clustering']):
         print("CALCULATING COVARIANCE FOR ANGULAR POWER SPECTRA")
         print("################################################")    
@@ -38,7 +39,8 @@ if not observables['arbitrary_summary']['do_arbitrary_summary']:
                     covariance_in_ell_space[0],
                     covariance_in_ell_space[1],
                     covariance_in_ell_space[2])
-        
+    
+    if survey_params['which_cov_binning'] == 'EC20':
         import numpy as np
         out_folder = output['Cell'].replace('./', '').replace('/Cell.ascii', '')
         np.savetxt(f'{out_folder}/delta_ell.txt', covell.delta_ell_dav)
