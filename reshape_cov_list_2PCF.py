@@ -12,7 +12,7 @@ import configparser
 import os
 ROOT = os.getenv('ROOT')
 sys.path.append(f'{ROOT}/Spaceborne')
-import bin.my_module as mm
+import spaceborne.my_module as mm
 # matplotlib.use('Agg')
 
 
