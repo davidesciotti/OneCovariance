@@ -183,7 +183,7 @@ if load_mat_files:
     mm.compare_arrays(cov_mat_fmt_2dcloe[:n_elem_auto, :n_elem_auto], cov_g_2d_gggg,
                       'cov_mat_fmt_2dcloe', 'cov_list_fmt_2d')
 
-# ! save vectors of variances for Matteo
+# ! save vectors of variances and G covariance for Matteo
 for probe_idx in range(4):
     cov_g_6d = cov_g_10d[probe_idx, probe_idx, ...]
 
@@ -196,10 +196,11 @@ for probe_idx in range(4):
     cov_g_4d = mm.cov_6D_to_4D(cov_g_6d, theta_bins, zpairs, ind_here)
     cov_g_2d = mm.cov_4D_to_2D(cov_g_4d, block_index='vincenzo')
 
-    # mm.matshow(cov_g_2d, log=True)
+    mm.matshow(cov_g_2d, log=True, title=probe_names[probe_idx])
 
     variance = np.diag(cov_g_2d)
     np.savetxt(cov_folder + '/variance_' + probe_names[probe_idx] + '.dat', variance)
+    np.save(cov_folder + '/cov_' + probe_names[probe_idx] + '.npy', cov_g_2d)
 
 colors = cm.rainbow(np.linspace(0, 1, zbins))
 
