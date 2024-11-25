@@ -2424,7 +2424,7 @@ class CovELLSpace(PolySpectra):
                                unique_34):
         if not isinstance(cov, np.ndarray):
             return 0
-        full_sky_angle = 1 * self.deg2torad2  # I believe this is correct?
+        full_sky_angle = 1 * self.deg2torad2  # this is correct
 
         binned_covariance = np.zeros((len(ellrange_12_ul) - 1, len(ellrange_34_ul) - 1, len(cov[0,0,:,0,0,0,0,0]), len(cov[0,0,0,:,0,0,0,0]), len(cov[0,0,0,0,:,0,0,0]), len(cov[0,0,0,0,0,:,0,0]), len(cov[0,0,0,0,0,0,:,0]), len(cov[0,0,0,0,0,0,0,:])))
         t0, tomos = time.time(), 0
