@@ -63,9 +63,9 @@ def objective_function(ell_max):
     return ssd
 
 
-cov_folder = '/home/cosmo/davide.sciotti/data/OneCovariance/output_SPV3_v3_CLOEcov'
-cov_ssc_sb_folder = '/home/cosmo/davide.sciotti/data/common_data/Spaceborne/jobs/SPV3/output/Flagship_2/covmat/Spaceborne/separate_universe'
-cov_ssc_sb_filename = 'covmat_SSC_spaceborne_{probe_a:s}{probe_b:s}{probe_c:s}{probe_d:s}_zbinsEP13_lmax5000_ML245_ZL02_MS245_ZS02_pkHMCodeBar_4D_zsteps7000_k1overMpc_conventionPySSC_integrationsimps_14700deg2_clsCLOE.npz'
+print('Reshaping OneCovariance output files...')
+
+cov_folder = sys.argv[1]
 chunk_size = 5000000
 load_mat_files = False
 
@@ -310,141 +310,11 @@ cl_oc_out_ll_3d = cl_oc_to_3d('Cell_kappakappa')
 cl_oc_out_gl_3d = cl_oc_to_3d('Cell_gkappa')
 cl_oc_out_gg_3d = cl_oc_to_3d('Cell_gg')
 
-# ! compute Gaussian covariance with Spaceborne
-try:
-    delta_ell_cl_out = np.genfromtxt(f'{cov_folder}/delta_ell.txt')
-except FileNotFoundError:
-    warnings.warn('delta_ell.txt not found, using spaceborne values...')
-    delta_ell_cl_out = delta_ell_sb
-
-try:
-    survey_area_deg2 = float(cfg['survey specs']['survey_area_lensing_in_deg2'])
-except KeyError:
-    warnings.warn('MANUALLY SETTING SURVEY AREA TO 14700 deg2')
-    survey_area_deg2 = 14700
-
-deg2_in_sphere = 41_252.96125
-fsky = survey_area_deg2 / deg2_in_sphere
-
-sigma_eps_i = float(cfg['survey specs']['ellipticity_dispersion'].split(',')[0])
-# [assert sigma_eps_i == float(cfg['survey specs']['ellipticity_dispersion'].split(',')[zi]) for zi in range(1, zbins)]
-
-string_from_ini = cfg['survey specs']['n_eff_lensing']
-string_elements = string_from_ini.split(',')
-ngal_lensing = np.array([float(element.strip()) for element in string_elements])
-
-string_from_ini = cfg['survey specs']['n_eff_clust']
-string_elements = string_from_ini.split(',')
-ngal_clustering = np.array([float(element.strip()) for element in string_elements])
-
-assert np.allclose(ngal_lensing, ngal_clustering, atol=0, rtol=1e-5), 'ngal_lensing and ngal_clustering do not match'
-
-n_probes = 2
-sigma_eps2 = (sigma_eps_i * np.sqrt(2)) ** 2,
-
-# build noise vector
-noise_3x2pt_4D = mm.build_noise(zbins, n_probes, sigma_eps2=sigma_eps2,
-                                ng_shear=ngal_lensing, ng_clust=ngal_clustering,
-                                EP_or_ED='EP', which_shape_noise='per_component')
-
-# create dummy ell axis, the array is just repeated along it
-noise_5D = np.zeros((n_probes, n_probes, nbl_cl_out, zbins, zbins))
-cl_3x2pt_5D = np.zeros((n_probes, n_probes, nbl_cl_out, zbins, zbins))
-for probe_A in (0, 1):
-    for probe_B in (0, 1):
-        for ell_idx in range(nbl_cl_out):
-            noise_5D[probe_A, probe_B, ell_idx, :, :] = noise_3x2pt_4D[probe_A, probe_B, ...]
-
-# remember, the ell axis is a dummy one for the noise, is just needs to be of the
-# same length as the corresponding cl one
-noise_LL_5D = noise_5D[0, 0, :nbl_cl_out, :, :][np.newaxis, np.newaxis, ...]
-noise_GG_5D = noise_5D[1, 1, :nbl_cl_out, :, :][np.newaxis, np.newaxis, ...]
-noise_3x2pt_5D = noise_5D[:, :, :nbl_cl_out, :, :]
-
-cl_LL_5D = cl_oc_out_ll_3d[np.newaxis, np.newaxis, ...]
-cl_GG_5D = cl_oc_out_gg_3d[np.newaxis, np.newaxis, ...]
-cl_3x2pt_5D[0, 0, ...] = cl_oc_out_ll_3d
-cl_3x2pt_5D[1, 1, ...] = cl_oc_out_gg_3d
-cl_3x2pt_5D[0, 1, ...] = cl_oc_out_gl_3d.transpose(0, 2, 1)
-cl_3x2pt_5D[1, 0, ...] = cl_oc_out_gl_3d
-
-# 5d versions of auto-probe spectra
-cov_WL_g_sb_6d = mm.covariance_einsum(cl_LL_5D, noise_LL_5D, fsky, ells_cl_out, delta_ell_cl_out, True)[0, 0, 0, 0, ...]
-cov_GC_g_sb_6d = mm.covariance_einsum(cl_GG_5D, noise_GG_5D, fsky, ells_cl_out, delta_ell_cl_out, True)[0, 0, 0, 0, ...]
-cov_3x2pt_g_sb_9d = mm.covariance_einsum(cl_3x2pt_5D, noise_3x2pt_5D, fsky, ells_cl_out, delta_ell_cl_out, True)
-
-cov_WL_sva_sb_9d, cov_WL_sn_sb_9d, cov_WL_mix_sb_9d = mm.covariance_einsum_split(
-    cl_LL_5D, noise_LL_5D, fsky, ells_cl_out, delta_ell_cl_out, True)
-cov_GC_sva_sb_9d, cov_GC_sn_sb_9d, cov_GC_mix_sb_9d = mm.covariance_einsum_split(
-    cl_GG_5D, noise_GG_5D, fsky, ells_cl_out, delta_ell_cl_out, True)
-cov_3x2pt_sva_sb_9d, cov_3x2pt_sn_sb_9d, cov_3x2pt_mix_sb_9d = mm.covariance_einsum_split(
-    cl_3x2pt_5D, noise_3x2pt_5D, fsky, ells_cl_out, delta_ell_cl_out, True)
-
-# this is needed to retain only the relevant dimensions, the first 4 are superfluous
-cov_WL_sva_sb_6d = cov_WL_sva_sb_9d[0, 0, 0, 0, ...]
-cov_GC_sva_sb_6d = cov_GC_sva_sb_9d[0, 0, 0, 0, ...]
-cov_WL_sn_sb_6d = cov_WL_sn_sb_9d[0, 0, 0, 0, ...]
-cov_GC_sn_sb_6d = cov_GC_sn_sb_9d[0, 0, 0, 0, ...]
-cov_WL_mix_sb_6d = cov_WL_mix_sb_9d[0, 0, 0, 0, ...]
-cov_GC_mix_sb_6d = cov_GC_mix_sb_9d[0, 0, 0, 0, ...]
-# ! END compute Gaussian covariance with Spaceborne
-
-# Compare flattened covariance elements for the various G terms (SVA, SN, MIX)
-# ! note: this test will "fail", as the OC cov is not symmetrized and the SB one is
-cov_sva_oc_9d = np.array([cov_sva_oc_10d[:, :, :, :, ell_idx, ell_idx, :, :, :, :] for ell_idx in range(cov_nbl)])
-cov_sn_oc_9d = np.array([cov_sn_oc_10d[:, :, :, :, ell_idx, ell_idx, :, :, :, :] for ell_idx in range(cov_nbl)])
-cov_mix_oc_9d = np.array([cov_mix_oc_10d[:, :, :, :, ell_idx, ell_idx, :, :, :, :] for ell_idx in range(cov_nbl)])
-
-elem_toplot = 10_000
-plt.figure()
-plt.plot(cov_3x2pt_sva_sb_9d.flatten()[:elem_toplot], label='SVA SB')
-plt.plot(cov_sva_oc_9d.flatten()[:elem_toplot], label='SVA OC', alpha=.7, ls='--')
-plt.legend()
-plt.yscale('log')
-
-plt.figure()
-plt.plot(cov_3x2pt_sn_sb_9d.flatten()[:elem_toplot], label='sn SB')
-plt.plot(cov_sn_oc_9d.flatten()[:elem_toplot], label='sn OC', alpha=.7, ls='--')
-plt.legend()
-plt.yscale('log')
-
-plt.figure()
-plt.plot(cov_3x2pt_mix_sb_9d.flatten()[:elem_toplot], label='mix SB')
-plt.plot(cov_mix_oc_9d.flatten()[:elem_toplot], label='mix OC', alpha=.7, ls='--')
-plt.legend()
-plt.yscale('log')
 
 # compare 2D Gaussian covariance, SB vs OC, for the different terms
 cov_3x2pt_sva_sb_10d = np.zeros((2, 2, 2, 2, 32, 32, 13, 13, 13, 13))
 cov_3x2pt_sn_sb_10d = np.zeros((2, 2, 2, 2, 32, 32, 13, 13, 13, 13))
 cov_3x2pt_mix_sb_10d = np.zeros((2, 2, 2, 2, 32, 32, 13, 13, 13, 13))
-for ell_idx in range(cov_nbl):
-    cov_3x2pt_sva_sb_10d[:, :, :, :, ell_idx, ell_idx, :, :, :,
-                         :] = cov_3x2pt_sva_sb_9d[:, :, :, :, ell_idx, :, :, :, :]
-    cov_3x2pt_sn_sb_10d[:, :, :, :, ell_idx, ell_idx, :, :, :, :] = cov_3x2pt_sn_sb_9d[:, :, :, :, ell_idx, :, :, :, :]
-    cov_3x2pt_mix_sb_10d[:, :, :, :, ell_idx, ell_idx, :, :, :,
-                         :] = cov_3x2pt_mix_sb_9d[:, :, :, :, ell_idx, :, :, :, :]
-
-# have a look at the 2D cov
-cov_sva_oc_4d = mm.cov_3x2pt_10D_to_4D(cov_sva_oc_10d, probe_ordering, cov_nbl, zbins, ind.copy(), GL_or_LG)
-cov_sn_oc_4d = mm.cov_3x2pt_10D_to_4D(cov_sn_oc_10d, probe_ordering, cov_nbl, zbins, ind.copy(), GL_or_LG)
-cov_mix_oc_4d = mm.cov_3x2pt_10D_to_4D(cov_mix_oc_10d, probe_ordering, cov_nbl, zbins, ind.copy(), GL_or_LG)
-
-cov_sva_sb_4d = mm.cov_3x2pt_10D_to_4D(cov_3x2pt_sva_sb_10d, probe_ordering, cov_nbl, zbins, ind.copy(), GL_or_LG)
-cov_sn_sb_4d = mm.cov_3x2pt_10D_to_4D(cov_3x2pt_sn_sb_10d, probe_ordering, cov_nbl, zbins, ind.copy(), GL_or_LG)
-cov_mix_sb_4d = mm.cov_3x2pt_10D_to_4D(cov_3x2pt_mix_sb_10d, probe_ordering, cov_nbl, zbins, ind.copy(), GL_or_LG)
-
-cov_sva_oc_2d = mm.cov_4D_to_2D(cov_sva_oc_4d, block_index='vincenzo')
-cov_sn_oc_2d = mm.cov_4D_to_2D(cov_sn_oc_4d, block_index='vincenzo')
-cov_mix_oc_2d = mm.cov_4D_to_2D(cov_mix_oc_4d, block_index='vincenzo')
-
-cov_sva_sb_2d = mm.cov_4D_to_2D(cov_sva_sb_4d, block_index='vincenzo')
-cov_sn_sb_2d = mm.cov_4D_to_2D(cov_sn_sb_4d, block_index='vincenzo')
-cov_mix_sb_2d = mm.cov_4D_to_2D(cov_mix_sb_4d, block_index='vincenzo')
-
-mm.compare_arrays(cov_sva_oc_2d, cov_sva_sb_2d)
-mm.compare_arrays(cov_sn_oc_2d, cov_sn_sb_2d)
-mm.compare_arrays(cov_mix_oc_2d, cov_mix_sb_2d)
 
 symmetrize_output_dict = {
     ('L', 'L'): False,
@@ -453,38 +323,8 @@ symmetrize_output_dict = {
     ('G', 'G'): False,
 }
 
-# ! load SSC from Spaceborne
-cov_3x2pt_ssc_sb_dict_8D = mm.load_cov_from_probe_blocks(cov_ssc_sb_folder, cov_ssc_sb_filename, probe_ordering)
-cov_3x2pt_ssc_sb_dict_10D = mm.cov_3x2pt_dict_8d_to_10d(cov_3x2pt_ssc_sb_dict_8D, cov_nbl, zbins, ind_dict, probe_ordering, 
-                                                   symmetrize_output_dict=symmetrize_output_dict)
-cov_3x2pt_ssc_sb_10D = mm.cov_10D_dict_to_array(cov_3x2pt_ssc_sb_dict_10D, cov_nbl, zbins)
-cov_3x2pt_ssc_sb_4D = mm.cov_3x2pt_10D_to_4D(
-    cov_3x2pt_ssc_sb_dict_10D, probe_ordering, cov_nbl, zbins, ind.copy(), GL_or_LG)
-cov_3x2pt_ssc_sb_2D = mm.cov_4D_to_2D(cov_3x2pt_ssc_sb_4D, block_index='vincenzo')
-
-# compare 2D SSC
-cov_ssc_oc_4d = mm.cov_3x2pt_10D_to_4D(cov_ssc_oc_10d, probe_ordering, cov_nbl, zbins, ind.copy(), GL_or_LG)
-cov_ssc_oc_2d = mm.cov_4D_to_2D(cov_ssc_oc_4d, block_index='vincenzo')
-
-mm.compare_arrays(cov_3x2pt_ssc_sb_2D, cov_ssc_oc_2d, 'cov_3x2pt_ssc_sb_2D', 'cov_ssc_oc_2d', log_diff=True)
-mm.compare_arrays(mm.cov2corr(cov_3x2pt_ssc_sb_2D), mm.cov2corr(cov_ssc_oc_2d), 'corr_3x2pt_ssc_sb_2D', 'corr_ssc_oc_2d', log_diff=True)
-
 
 # ! load 2d covs for CLOE runs
-cov_3x2pt_g_sb_2D_bench = np.load('/home/cosmo/davide.sciotti/data/CLOE_benchmarks/CovMat-3x2pt-Gauss-32Bins-v2.npy')
-cov_3x2pt_gssc_sb_2D_bench = np.load('/home/cosmo/davide.sciotti/data/CLOE_benchmarks/CovMat-3x2pt-GaussSSC-32Bins-v2.npy')
-cov_3x2pt_ssc_sb_2D_bench = cov_3x2pt_gssc_sb_2D_bench - cov_3x2pt_g_sb_2D_bench
-
-cov_3x2pt_g_sb_4D_bench = mm.cov_2DCLOE_to_4D_3x2pt(cov_3x2pt_g_sb_2D_bench, cov_nbl, zbins, block_index='vincenzo')
-cov_3x2pt_ssc_sb_4D_bench = mm.cov_2DCLOE_to_4D_3x2pt(cov_3x2pt_ssc_sb_2D_bench, cov_nbl, zbins, block_index='vincenzo')
-
-cov_3x2pt_g_sb_dict_10D_bench = mm.cov_3x2pt_4d_to_10d_dict(cov_3x2pt_g_sb_4D_bench, zbins, probe_ordering, cov_nbl, ind.copy())
-cov_3x2pt_ssc_sb_dict_10D_bench = mm.cov_3x2pt_4d_to_10d_dict(cov_3x2pt_ssc_sb_4D_bench, zbins, probe_ordering, cov_nbl, ind.copy())
-
-cov_3x2pt_g_sb_10D_bench = mm.cov_10D_dict_to_array(cov_3x2pt_g_sb_dict_10D_bench, cov_nbl, zbins)
-cov_3x2pt_ssc_sb_10D_bench = mm.cov_10D_dict_to_array(cov_3x2pt_ssc_sb_dict_10D_bench, cov_nbl, zbins)
-
-
 cov_oc_10d_dict = {'SVA': cov_sva_oc_10d,
                    'MIX': cov_mix_oc_10d,
                    'SN': cov_sn_oc_10d,
@@ -544,7 +384,7 @@ for cov_term in cov_oc_10d_dict.keys():
 # ! construct 2d cov as you do in spaceborne, from input blocks
 block_index = 'ij'
 cov_filename = 'cov_tot_onecovariance_{probe_a:s}{probe_b:s}{probe_c:s}{probe_d:s}_4D_' + \
-    f'nbl{cov_nbl}_ellmax{ellmax_save_filename}_zbinsEP{zbins}.npz'
+    f'nbl{cov_nbl}_ellmax{ellmax_save_filename}_zbinsEP{zbins:02d}.npz'
 cov_3x2pt_dict_8D_load = mm.load_cov_from_probe_blocks(cov_folder, cov_filename, probe_ordering)
 cov_3x2pt_dict_10D_load = mm.cov_3x2pt_dict_8d_to_10d(cov_3x2pt_dict_8D_load, cov_nbl, zbins, ind_dict, probe_ordering)
 cov_tot_3x2pt_4d_load = mm.cov_3x2pt_10D_to_4D(
@@ -580,73 +420,6 @@ if load_mat_files:
                           f'cov_mat_fmt_{block_name}', f'cov_dat_fmt_{block_name}', log_array=True)
 
 
-# ! plot Cl and errors
-probe_names = ['Cl_LL', 'Cl_GL', 'Cl_GG']
-cols = 3
-rows = 1
-colors = cm.rainbow(np.linspace(0, 1, zbins))
-fig, ax = plt.subplots(rows, cols, figsize=(15, 4))
-for probe_idx, probe in zip((range(cols)), (cl_oc_out_ll_3d, cl_oc_out_gl_3d, cl_oc_out_gg_3d)):
-
-    if probe_idx == 0:
-        probe_idx_list = (0, 0, 0, 0)
-    elif probe_idx == 1:
-        probe_idx_list = (1, 0, 1, 0)
-    elif probe_idx == 2:
-        probe_idx_list = (1, 1, 1, 1)
-
-    for zi in range(zbins):
-
-        var_g_oc_vs_ell = np.sqrt([cov_g_oc_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-                                                ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
-        var_sva_oc_vs_ell = np.sqrt([cov_sva_oc_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-                                                    ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
-        var_mix_oc_vs_ell = np.sqrt([cov_mix_oc_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-                                                    ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
-        var_sn_ob_vs_ell = np.sqrt([cov_sn_oc_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-                                                  ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
-        var_ssc_oc_vs_ell = np.sqrt([cov_ssc_oc_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-                                                    ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
-        var_cng_oc_vs_ell = np.sqrt([cov_cng_oc_10d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-                                                    ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(cov_nbl)])
-
-        # var_g_sb_vs_ell = np.sqrt([cov_3x2pt_g_sb_9d[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-        #                                              ell_idx, zi, zi, zi, zi] for ell_idx in range(len(ells_sb))])
-        var_g_sb_vs_ell = np.sqrt([cov_3x2pt_g_sb_10D_bench[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-                                                     ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(len(ells_sb))])
-        var_ssc_sb_vs_ell = np.sqrt([cov_3x2pt_ssc_sb_10D_bench[probe_idx_list[0], probe_idx_list[1], probe_idx_list[2], probe_idx_list[3],
-                                                     ell_idx, ell_idx, zi, zi, zi, zi] for ell_idx in range(len(ells_sb))])
-
-        # errorbars
-        # ax[col].errorbar(theta_arcmin, xi_pp_3D[:, zi, zi], yerr=cov_vs_ell, label=f'z{zi}', c=colors[zi], alpha=0.5)
-
-        # plot signal and error separately
-        plt_kwargs = {'c': colors[zi], 'marker': ''}
-        
-        # signal
-        ax[probe_idx].plot(ells_cl_out, probe[:, zi, zi], label=f'z{zi}', **plt_kwargs,)
-        
-        # Gaussian
-        # ax[probe_idx].plot(ells_oc_load, var_g_oc_vs_ell, label=f'z{zi}, G OC' if zi == 0 else None, **plt_kwargs, ls='--')
-        # ax[probe_idx].plot(ells_sb, var_g_sb_vs_ell, label=f'z{zi}, G SB' if zi == 0 else None, **plt_kwargs, ls=':')
-        
-        # SSC
-        ax[probe_idx].plot(ells_oc_load, var_ssc_oc_vs_ell, label=f'z{zi}, SSC OC' if zi == 0 else None, **plt_kwargs, ls='--')
-        ax[probe_idx].plot(ells_sb, var_ssc_sb_vs_ell, label=f'z{zi}, SSC SB' if zi == 0 else None, **plt_kwargs, ls=':')
-
-        # all terms
-        # ax[probe_idx].plot(ells_oc_load, cov_sva_vs_ell, label=f'z{zi}, SVA', c='tab:green', ls=':', marker='.')
-        # ax[probe_idx].plot(ells_oc_load, cov_mix_vs_ell, label=f'z{zi}, MIX', c='tab:orange', ls=':', marker='.')
-        # ax[probe_idx].plot(ells_oc_load, cov_sn_vs_ell, label=f'z{zi}, SN', c='tab:purple', ls=':', marker='.')
-        # ax[probe_idx].plot(ells_oc_load, cov_ssc_vs_ell, label=f'z{zi}, SSC', c='tab:red', ls='-', marker='.')
-        # ax[probe_idx].plot(ells_oc_load, cov_cng_vs_ell, label=f'z{zi}, cNG', c='tab:blue', ls='-', marker='.')
-
-    ax[probe_idx].set_title(probe_names[probe_idx])
-    ax[probe_idx].set_xlabel('$\ell$')
-    ax[probe_idx].set_yscale('log')
-    ax[probe_idx].set_xscale('log')
-ax[0].set_ylabel('$C(\ell)$')
-ax[probe_idx].legend(bbox_to_anchor=(1.22, 1), loc='center right')
 
 
-print('done in ', time.perf_counter() - start, ' seconds')
+print('...done in ', time.perf_counter() - start, ' seconds')

@@ -37,18 +37,19 @@ def extract_probes(probe_string, probe_names):
 
     return matched_probes
 
-
-cov_folder = '/home/cosmo/davide.sciotti/data/OneCovariance/output_2PCF_C01_v5_nbl30'
-cl_input_folder = '/home/cosmo/davide.sciotti/data/CLOE_validation/output/v2.0.2/C01'
+case = 'C00'
+cov_folder = f'/home/cosmo/davide.sciotti/data/OneCovariance/output_2PCF_{case}_v1_nbl271'
+cl_input_folder = f'/home/cosmo/davide.sciotti/data/CLOE_validation/output/v2.0.2/{case}'
 
 cfg = configparser.ConfigParser()
 cfg.read(cov_folder + '/save_configs.ini')
+# explore the entries with cfg.sections(), not .keys()
 
-zbins = 10
+zbins = len(cfg['survey specs']['ellipticity_dispersion'].split(', '))
 theta_bins = int(float(cfg['covTHETAspace settings']['theta_bins']))
 theta_max = int(float(cfg['covTHETAspace settings']['theta_max']))
 
-chunk_size = 5000000
+chunk_size = 5_000_000
 load_mat_files = False
 theta_unit = 'arcmin'
 
@@ -63,14 +64,12 @@ column_names = [
     'cov', 'covg sva', 'covg mix', 'covg sn', 'covng', 'covssc',
 ]
 
-
 probe_idx_dict = {
     'gg': 0,
     'gm': 1,
     'xip': 2,
     'xim': 3,
 }
-
 
 # ! get, show and reshape the .mat file, for a later check
 if load_mat_files:
@@ -94,14 +93,13 @@ if load_mat_files:
     # gc.collect()
 
 # ! consistency check for the output cls
-cl_ll_in = np.genfromtxt(f'{cl_input_folder}/Cij-LL-PyCCLforOneCov-C01.ascii')
-cl_gl_in = np.genfromtxt(f'{cl_input_folder}/Cij-GL-PyCCLforOneCov-C01.ascii')
-cl_gg_in = np.genfromtxt(f'{cl_input_folder}/Cij-GG-PyCCLforOneCov-C01.ascii')
+# cl_ll_in = np.genfromtxt(f'{cl_input_folder}/OneCovariance/Cij-LL-LiFEforOneCov-{case}-nbl217.ascii')
+# cl_gl_in = np.genfromtxt(f'{cl_input_folder}/OneCovariance/Cij-GL-LiFEforOneCov-{case}-nbl217.ascii')
+# cl_gg_in = np.genfromtxt(f'{cl_input_folder}/OneCovariance/Cij-GG-LiFEforOneCov-{case}-nbl217.ascii')
 
 cl_ll_out = np.genfromtxt(f'{cov_folder}/Cell_kappakappa.ascii')
 cl_gl_out = np.genfromtxt(f'{cov_folder}/Cell_gkappa.ascii')
 cl_gg_out = np.genfromtxt(f'{cov_folder}/Cell_gg.ascii')
-
 
 ell = np.unique(cl_ll_out[:, 0])
 print('nbl:', len(ell))
@@ -205,10 +203,10 @@ for probe_idx in range(4):
 colors = cm.rainbow(np.linspace(0, 1, zbins))
 
 # ! plot 2PCF and errors
-xi_gg_2d = np.genfromtxt(f'{cl_input_folder}/xi-ij-GG-PyCCL-C01.dat')
-xi_gl_2d = np.genfromtxt(f'{cl_input_folder}/xi-ij-GL-PyCCL-C01.dat')
-xi_pp_2d = np.genfromtxt(f'{cl_input_folder}/xi-ij-Lplus-PyCCL-C01.dat')
-xi_mm_2d = np.genfromtxt(f'{cl_input_folder}/xi-ij-Lminus-PyCCL-C01.dat')
+xi_gg_2d = np.genfromtxt(f'{cl_input_folder}/xi-ij-GG-LiFE-{case}.dat')
+xi_gl_2d = np.genfromtxt(f'{cl_input_folder}/xi-ij-GL-LiFE-{case}.dat')
+xi_pp_2d = np.genfromtxt(f'{cl_input_folder}/xi-ij-Plus-LiFE-{case}.dat')
+xi_mm_2d = np.genfromtxt(f'{cl_input_folder}/xi-ij-Minus-LiFE-{case}.dat')
 
 theta_deg = xi_gg_2d[:, 0]
 theta_arcmin = theta_deg * 60
