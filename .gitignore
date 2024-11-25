@@ -20,3 +20,4 @@ levin.egg-info
 !/output/Cell_kappakappa.ascii
 /output_*/
 /!archive/output_*/
+check_ssc_integrands/*
