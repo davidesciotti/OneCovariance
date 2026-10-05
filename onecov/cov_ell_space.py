@@ -2806,7 +2806,7 @@ class CovELLSpace(PolySpectra):
                                 for l_tomo in range(up_limit_4 - lo_limit_4):
                                     if np.any(np.diagonal(covariance_aux[:, :, 0, 0, i_tomo, j_tomo, k_tomo, l_tomo])!=0):
                                         spline = UnivariateSpline(self.ellrange,np.diagonal(covariance_aux[:, :, 0, 0, i_tomo, j_tomo, k_tomo, l_tomo]), k=2, s=0, ext=1)
-                                        result = full_sky_angle / max(area_12,area_34)*np.sum(spline(overlapping_elements)/(2.*overlapping_elements + 1))/len(integration_ell_12)/len(integration_ell_34)
+                                        result = full_sky_angle / max(np.max(area_12), np.max(area_34))*np.sum(spline(overlapping_elements)/(2.*overlapping_elements + 1))/len(integration_ell_12)/len(integration_ell_34)
                                         binned_covariance[i_ell, j_ell, 0, 0, i_tomo, j_tomo, k_tomo, l_tomo] = result
         return binned_covariance
     
@@ -2821,7 +2821,7 @@ class CovELLSpace(PolySpectra):
                             unique_34):
         if not isinstance(cov, np.ndarray):
             return 0
-        fsky = max(area_12,area_34)/(4.0*np.pi * self.deg2torad2)
+        fsky = max(np.max(area_12), np.max(area_34))/(4.0*np.pi * self.deg2torad2)
         binned_covariance = np.zeros((len(ellrange_12_ul) - 1, len(ellrange_34_ul) - 1, len(cov[0,0,:,0,0,0,0,0]), len(cov[0,0,0,:,0,0,0,0]), len(cov[0,0,0,0,:,0,0,0]), len(cov[0,0,0,0,0,:,0,0]), len(cov[0,0,0,0,0,0,:,0]), len(cov[0,0,0,0,0,0,0,:])))
         for i_ell in range(len(ellrange_12_ul) - 1):
             for j_ell in range(len(ellrange_34_ul) - 1):
@@ -2901,7 +2901,7 @@ class CovELLSpace(PolySpectra):
                                             result /= (area12_ell*area34_ell)
                                             result *= 4*np.pi**2
                                             if connected:
-                                                result *=  self.deg2torad2/max(area_12,area_34)
+                                                result *=  self.deg2torad2/max(np.max(area_12), np.max(area_34))
                                             binned_covariance[i_ell, j_ell, i_sample, j_sample, i_tomo, j_tomo, k_tomo, l_tomo] = result    
         return binned_covariance
 
@@ -3110,7 +3110,7 @@ class CovELLSpace(PolySpectra):
                                     result /= (area12_ell*area34_ell)
                                     result *= 4*np.pi**2
                                     if connected:
-                                        result *=  self.deg2torad2/max(area_12,area_34)
+                                        result *=  self.deg2torad2/max(np.max(area_12), np.max(area_34))
                                     binned_covariance[i_ell, j_ell, 0,0, i_tomo, j_tomo, k_tomo, l_tomo] = result  
 
         return binned_covariance
