@@ -1799,9 +1799,11 @@ class Output:
                                                         cov = gauss[oidx][idxs] \
                                                             + nongauss[oidx][idxs] \
                                                             + ssc[oidx][idxs]
+                                                        ri_o, rj_o, s1_o, s2_o, t1_o, t2_o, t3_o, t4_o = self.__gmxi_label_order(
+                                                            obs, ri, rj, i_s1, i_s2, t1, t2, t3, t4)
                                                         ostr = ostr_format \
-                                                            % (obs_copy,  ri, rj, 
-                                                            i_s1 + 1, i_s2 + 1, t1+1, t2+1, t3+1, t4+1, 
+                                                            % (obs_copy,  ri_o, rj_o,
+                                                            s1_o + 1, s2_o + 1, t1_o + 1, t2_o + 1, t3_o + 1, t4_o + 1,
                                                             cov, 
                                                             gauss[oidx][idxs],
                                                             nongauss[oidx][idxs],
@@ -1964,9 +1966,11 @@ class Output:
                                                             + gauss[splitidx+2][idxs] \
                                                             + nongauss[oidx][idxs] \
                                                             + ssc[oidx][idxs]
+                                                        ri_o, rj_o, s1_o, s2_o, t1_o, t2_o, t3_o, t4_o = self.__gmxi_label_order(
+                                                            obs, ri, rj, i_s1, i_s2, t1, t2, t3, t4)
                                                         ostr = ostr_format \
-                                                            % (obs_copy,  ri, rj, 
-                                                            i_s1+1, i_s2+1, t1+1, t2+1, t3+1, t4+1, 
+                                                            % (obs_copy,  ri_o, rj_o,
+                                                            s1_o + 1, s2_o + 1, t1_o + 1, t2_o + 1, t3_o + 1, t4_o + 1,
                                                             cov, 
                                                             gauss[splitidx][idxs],
                                                             gauss[splitidx+1][idxs],
@@ -2712,9 +2716,11 @@ class Output:
                                                         else:
                                                             ssc_aux = ssc[i_probe][idxs]    
                                                         cov = gauss_aux + nongauss_aux + ssc_aux 
+                                                        ri_o, rj_o, s1_o, s2_o, t1_o, t2_o, t3_o, t4_o = self.__gmxi_label_order(
+                                                            obs, ri, rj, i_s1, i_s2, t1, t2, t3, t4)
                                                         ostr = ostr_format \
-                                                            % (obs_copy,  ri, rj, 
-                                                            i_s1 + 1, i_s2 + 1, t1+1, t2+1, t3+1, t4+1, 
+                                                            % (obs_copy,  ri_o, rj_o,
+                                                            s1_o + 1, s2_o + 1, t1_o + 1, t2_o + 1, t3_o + 1, t4_o + 1,
                                                             cov, 
                                                             gauss_aux,
                                                             nongauss_aux,
@@ -2959,9 +2965,11 @@ class Output:
                                                             + gauss_sn \
                                                             + nongauss_aux \
                                                             + ssc_aux
+                                                        ri_o, rj_o, s1_o, s2_o, t1_o, t2_o, t3_o, t4_o = self.__gmxi_label_order(
+                                                            obs, ri, rj, i_s1, i_s2, t1, t2, t3, t4)
                                                         ostr = ostr_format \
-                                                            % (obs_copy, ri, rj,
-                                                            i_s1 + 1, i_s2 + 1, t1+1, t2+1, t3+1, t4+1, 
+                                                            % (obs_copy, ri_o, rj_o,
+                                                            s1_o + 1, s2_o + 1, t1_o + 1, t2_o + 1, t3_o + 1, t4_o + 1,
                                                             cov, 
                                                             gauss_sva,
                                                             gauss_mix,
@@ -3323,9 +3331,11 @@ class Output:
                                                     cov = gauss[oidx][idxs] \
                                                         + nongauss[oidx][idxs] \
                                                         + ssc[oidx][idxs]
+                                                    ri_o, rj_o, s1_o, s2_o, t1_o, t2_o, t3_o, t4_o = self.__gmxi_label_order(
+                                                        obs, ri, rj, i_s1, i_s2, t1, t2, t3, t4)
                                                     ostr = ostr_format \
-                                                        % (obs_copy,  int(ri + 1), int(rj + 1), 
-                                                        i_s1 + 1, i_s2 + 1, t1+1, t2+1, t3+1, t4+1, 
+                                                        % (obs_copy,  int(ri_o + 1), int(rj_o + 1),
+                                                        s1_o + 1, s2_o + 1, t1_o + 1, t2_o + 1, t3_o + 1, t4_o + 1,
                                                         cov, 
                                                         gauss[oidx][idxs],
                                                         nongauss[oidx][idxs],
@@ -3529,9 +3539,11 @@ class Output:
                                                         + gauss[splitidx+2][idxs] \
                                                         + nongauss[oidx][idxs] \
                                                         + ssc[oidx][idxs]
+                                                    ri_o, rj_o, s1_o, s2_o, t1_o, t2_o, t3_o, t4_o = self.__gmxi_label_order(
+                                                        obs, ri, rj, i_s1, i_s2, t1, t2, t3, t4)
                                                     ostr = ostr_format \
-                                                        % (obs_copy, int(ri + 1), int(rj + 1), 
-                                                        i_s1+1, i_s2+1, t1+1, t2+1, t3+1, t4+1, 
+                                                        % (obs_copy, int(ri_o + 1), int(rj_o + 1),
+                                                        s1_o + 1, s2_o + 1, t1_o + 1, t2_o + 1, t3_o + 1, t4_o + 1,
                                                         cov, 
                                                         gauss[splitidx][idxs],
                                                         gauss[splitidx+1][idxs],
@@ -3995,9 +4007,11 @@ class Output:
                                                     cov = gauss[oidx][idxs] \
                                                         + nongauss[oidx][idxs] \
                                                         + ssc[oidx][idxs]
+                                                    ri_o, rj_o, s1_o, s2_o, t1_o, t2_o, t3_o, t4_o = self.__gmxi_label_order(
+                                                        obs, ri, rj, i_s1, i_s2, t1, t2, t3, t4)
                                                     ostr = ostr_format \
-                                                        % (obs_copy,  int(ri + 1), int(rj + 1), 
-                                                        i_s1 + 1, i_s2 + 1, t1+1, t2+1, t3+1, t4+1, 
+                                                        % (obs_copy,  int(ri_o + 1), int(rj_o + 1),
+                                                        s1_o + 1, s2_o + 1, t1_o + 1, t2_o + 1, t3_o + 1, t4_o + 1,
                                                         cov, 
                                                         gauss[oidx][idxs],
                                                         nongauss[oidx][idxs],
@@ -4403,9 +4417,11 @@ class Output:
                                                         + gauss[splitidx+2][idxs] \
                                                         + nongauss[oidx][idxs] \
                                                         + ssc[oidx][idxs]
+                                                    ri_o, rj_o, s1_o, s2_o, t1_o, t2_o, t3_o, t4_o = self.__gmxi_label_order(
+                                                        obs, ri, rj, i_s1, i_s2, t1, t2, t3, t4)
                                                     ostr = ostr_format \
-                                                        % (obs_copy,  int(ri + 1), int(rj + 1),
-                                                        i_s1+1, i_s2+1, t1+1, t2+1, t3+1, t4+1, 
+                                                        % (obs_copy,  int(ri_o + 1), int(rj_o + 1),
+                                                        s1_o + 1, s2_o + 1, t1_o + 1, t2_o + 1, t3_o + 1, t4_o + 1,
                                                         cov, 
                                                         gauss[splitidx][idxs],
                                                         gauss[splitidx+1][idxs],
@@ -7173,6 +7189,19 @@ class Output:
                 np.savetxt(fn_reduced, cov2d_total_reduced, fmt='%.6e', delimiter=' ')
                 
         
+    def __gmxi_label_order(self, obs, ri, rj, i_s1, i_s2, t1, t2, t3, t4):
+        """
+        The 'gmxip' and 'gmxim' covariance blocks are stored in (xi, gm) order,
+        i.e. like 'mmgm': first scale/tomographic indices for the shear field, second
+        ones for galaxy-galaxy lensing. Their label, however, puts gm first. Swap the
+        two observables so that the scale, sample and tomographic indices written in
+        the list file follow the order of the label. The covariance is symmetric under
+        this exchange, so the values are unchanged.
+        """
+        if obs in ['gmxip', 'gmxim']:
+            return rj, ri, i_s2, i_s1, t3, t4, t1, t2
+        return ri, rj, i_s1, i_s2, t1, t2, t3, t4
+
     def __get_obslist(self, 
                       obs_dict,
                       xipm = False):
