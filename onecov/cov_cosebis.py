@@ -269,7 +269,7 @@ class CovCOSEBI(CovELLSpace):
         wide_theta = np.linspace(theta[0]*0.999, theta[-1]*1.001,int(1e4))
         lev.init_w_ell(np.log(wide_theta/tmin), np.ones_like(wide_theta)[:,None])
         z=np.log(theta/tmin)
-        for i_z, val_z in enumerate(z[1:]):
+        for i_z, val_z in enumerate(z[1:], start=1):
             y = np.linspace(z[0],val_z, 1000)
             integrand = tplus_func(y)*(np.exp(2*(y-val_z)) - 3*np.exp(4*(y-val_z)))
             limits_at_mode = np.array(y[argrelextrema(integrand, np.less)[0][:]])
