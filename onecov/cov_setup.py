@@ -1441,6 +1441,17 @@ class Setup:
                 ell, sum_m_a_lm = None, None
                 failure = True
         elif survey_params_dict['read_mask_'+est1+'_'+est2]:
+            # 'mask_file_<est1>_<est2>' only exists for the auto pairs
+            # (est1 == est2); the cross pairs get a 'read_mask_<est1>_<est2>'
+            # flag and an 'alm_file_<est1>_<est2>' but no mask file entry, so
+            # this used to raise KeyError and silently fall back to a circular
+            # mask. The second map of a cross pair is just the second
+            # estimator's own mask.
+            mask_files_2 = survey_params_dict.get(
+                'mask_file_'+est1+'_'+est2,
+                survey_params_dict.get('mask_file_'+est2+'_'+est2))
+            if mask_files_2 is None:
+                mask_files_2 = survey_params_dict['mask_file_'+est1+'_'+est1]
             for mfile in survey_params_dict['mask_file_'+est1+'_'+est1]:
                 try:
                     print("Reading in the mask file " + mfile + " to get the " +
@@ -1455,9 +1466,8 @@ class Setup:
                         C_ell = healpy.anafast(data, use_weights=True)
                         sum_m_a_lm.append((2 * aux_ell + 1) * C_ell[:ellmax])
                     else:'''
-                    for mfile2 in \
-                            survey_params_dict['mask_file_'+est1+'_'+est2]:
-                        print("Reading in the second mask file " + mfile +
+                    for mfile2 in mask_files_2:
+                        print("Reading in the second mask file " + mfile2 +
                             " to get the cross survey area modes.")
                         data2 = self._read_healpix_mask(mfile2)
                         Nside2 = healpy.npix2nside(len(data2))
