@@ -663,13 +663,15 @@ class CovELLSpace(PolySpectra):
         if covELLspacesettings['ell_type_clustering'] is not None and covELLspacesettings['ell_bins_clustering'] is not None and covELLspacesettings['ell_max_clustering'] is not None and covELLspacesettings['ell_min_clustering'] is not None:
             if (self.est_clust == "C_ell" and self.gg) or (self.est_ggl == "C_ell" and self.gm): 
                 if covELLspacesettings['ell_type_clustering'] == 'lin':
-                    self.ellrange_clustering_ul = np.linspace(
+                    # LOCAL PATCH (SB): band = integers lo <= ell < hi, i.e. ceil of the
+                    # float edges (np.digitize / Heracles / SB >= v2026.11.1); was .astype(int)
+                    self.ellrange_clustering_ul = np.ceil(np.linspace(
                         covELLspacesettings['ell_min_clustering'],
                         covELLspacesettings['ell_max_clustering'],
-                        covELLspacesettings['ell_bins_clustering'] + 1).astype(int)
+                        covELLspacesettings['ell_bins_clustering'] + 1)).astype(int)
                     self.ellrange_clustering = .5 * (self.ellrange_clustering_ul[1:] + self.ellrange_clustering_ul[:-1])
                 else:
-                    self.ellrange_clustering_ul = np.unique(np.geomspace(covELLspacesettings['ell_min_clustering'], covELLspacesettings['ell_max_clustering'], covELLspacesettings['ell_bins_clustering'] + 1).astype(int))
+                    self.ellrange_clustering_ul = np.unique(np.ceil(np.geomspace(covELLspacesettings['ell_min_clustering'], covELLspacesettings['ell_max_clustering'], covELLspacesettings['ell_bins_clustering'] + 1)).astype(int))  # LOCAL PATCH (SB): ceil, was .astype(int)
                     if len(self.ellrange_clustering_ul) != covELLspacesettings['ell_bins_clustering'] + 1:
                         print("InputWarning: you required", covELLspacesettings['ell_bins_clustering'], "logarithmically-spaced clustering bins.",
                               "However, the specified clustering ell-range from ", covELLspacesettings['ell_min_clustering'],  "to", covELLspacesettings['ell_max_clustering'], "does not support that many unique bins.",
@@ -681,13 +683,15 @@ class CovELLSpace(PolySpectra):
         if covELLspacesettings['ell_type_lensing'] is not None and covELLspacesettings['ell_bins_lensing'] is not None and covELLspacesettings['ell_max_lensing'] is not None and covELLspacesettings['ell_min_lensing'] is not None:
             if (self.est_shear == "C_ell" and self.mm): 
                 if covELLspacesettings['ell_type_lensing'] == 'lin':
-                    self.ellrange_lensing_ul = np.linspace(
+                    # LOCAL PATCH (SB): band = integers lo <= ell < hi, i.e. ceil of the
+                    # float edges (np.digitize / Heracles / SB >= v2026.11.1); was .astype(int)
+                    self.ellrange_lensing_ul = np.ceil(np.linspace(
                         covELLspacesettings['ell_min_lensing'],
                         covELLspacesettings['ell_max_lensing'],
-                        covELLspacesettings['ell_bins_lensing'] + 1).astype(int)
+                        covELLspacesettings['ell_bins_lensing'] + 1)).astype(int)
                     self.ellrange_lensing = .5 * (self.ellrange_lensing_ul[1:] + self.ellrange_lensing_ul[:-1])
                 else:
-                    self.ellrange_lensing_ul = np.unique(np.geomspace(covELLspacesettings['ell_min_lensing'], covELLspacesettings['ell_max_lensing'], covELLspacesettings['ell_bins_lensing'] + 1).astype(int))
+                    self.ellrange_lensing_ul = np.unique(np.ceil(np.geomspace(covELLspacesettings['ell_min_lensing'], covELLspacesettings['ell_max_lensing'], covELLspacesettings['ell_bins_lensing'] + 1)).astype(int))  # LOCAL PATCH (SB): ceil, was .astype(int)
                     if len(self.ellrange_lensing_ul) != covELLspacesettings['ell_bins_lensing'] + 1:
                         print("InputWarning: you required", covELLspacesettings['ell_bins_lensing'],"logarithmically-spaced lensing bins.",
                               "However, the specified lensing ell-range from", covELLspacesettings['ell_min_lensing'],  "to", covELLspacesettings['ell_max_lensing'], "does not support that many unique bins.", 
